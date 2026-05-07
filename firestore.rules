@@ -1,0 +1,208 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 3. Primitives & Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email in ['maykon.euro@gmail.com', 'administrador@exemplo.com'] ||
+        request.auth.uid == 'super_admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super-admin'
+      );
+    }
+
+    function isAdmin() {
+      return isSuperAdmin() || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+
+    function isOwner(data) {
+      return isSignedIn() && (
+        data.ownerId == request.auth.uid || 
+        data.professionalId == request.auth.uid ||
+        data.userId == request.auth.uid
+      );
+    }
+
+    function hasUnitAccess(unit) {
+      return isSignedIn() && unit != null && unit != "" && (
+        isSuperAdmin() || 
+        unit.upper().trim() in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.units
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation Helpers
+    function isValidStudent(data) {
+      return data.name is string && data.name.size() <= 200 &&
+             data.ra is string && data.ra.size() <= 50 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidSchool(data) {
+      return data.name is string && data.name.size() <= 200 &&
+             data.cnpj is string && data.cnpj.size() <= 20 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidAppointment(data) {
+      return data.studentId is string && data.studentId.size() <= 100 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    // 4. Match Blocks
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId && incoming().role != 'admin';
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId && (incoming().role == existing().role || isAdmin())) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      allow get: if isSignedIn() && (isOwner(resource.data) || hasUnitAccess(resource.data.unit) || hasUnitAccess(resource.data.schoolUnit) || isSuperAdmin());
+      allow list: if isSignedIn() && (isOwner(resource.data) || hasUnitAccess(resource.data.unit) || hasUnitAccess(resource.data.schoolUnit) || isSuperAdmin());
+      
+      allow create: if isSignedIn() && 
+        incoming().keys().hasAll(['name', 'ra', 'schoolId', 'ownerId', 'createdAt']) &&
+        isValidStudent(incoming()) && isValidId(studentId);
+        
+      allow update: if isSignedIn() && (isOwner(resource.data) || isOwner(existing()) || isAdmin()) && 
+        isValidStudent(incoming()) && 
+        incoming().ownerId == existing().ownerId;
+        
+      allow delete: if isAdmin();
+    }
+
+    match /schools/{schoolId} {
+      allow get: if isSignedIn() && (isOwner(resource.data) || hasUnitAccess(resource.data.unit) || hasUnitAccess(resource.data.name) || isSuperAdmin());
+      allow list: if isSignedIn() && (isOwner(resource.data) || hasUnitAccess(resource.data.unit) || hasUnitAccess(resource.data.name) || isSuperAdmin());
+      
+      allow create: if isSignedIn() && 
+        incoming().keys().hasAll(['name', 'cnpj', 'email', 'ownerId', 'createdAt']) &&
+        isValidSchool(incoming()) && isValidId(schoolId);
+        
+      allow update: if isSignedIn() && (isOwner(existing()) || isAdmin()) && 
+        isValidSchool(incoming()) && 
+        incoming().ownerId == existing().ownerId;
+        
+      allow delete: if isAdmin();
+    }
+
+    match /appointments/{appointmentId} {
+      allow get: if isSignedIn() && (isOwner(resource.data) || hasUnitAccess(resource.data.unit) || hasUnitAccess(resource.data.schoolUnit) || isSuperAdmin());
+      allow list: if isSignedIn() && (isOwner(resource.data) || hasUnitAccess(resource.data.unit) || hasUnitAccess(resource.data.schoolUnit) || isSuperAdmin());
+      
+      allow create: if isSignedIn() && 
+        isValidAppointment(incoming()) && 
+        isValidId(appointmentId);
+        
+      allow update: if isSignedIn() && (isOwner(existing()) || isAdmin()) && 
+        isValidAppointment(incoming()) && 
+        incoming().ownerId == existing().ownerId;
+        
+      allow delete: if isAdmin();
+    }
+
+    match /documents/{docId} {
+      allow get: if isSignedIn() && (isOwner(resource.data) || hasUnitAccess(resource.data.unit) || hasUnitAccess(resource.data.schoolUnit) || isSuperAdmin());
+      allow list: if isSignedIn() && (isOwner(resource.data) || hasUnitAccess(resource.data.unit) || hasUnitAccess(resource.data.schoolUnit) || isSuperAdmin());
+      
+      allow create: if isSignedIn() && 
+        incoming().ownerId == request.auth.uid && 
+        isValidId(docId);
+        
+      allow update: if isSignedIn() && (isOwner(existing()) || isAdmin()) && 
+        incoming().ownerId == existing().ownerId;
+        
+      allow delete: if isAdmin();
+    }
+
+    match /scheduling_requests/{requestId} {
+      allow get: if isSignedIn() && (isOwner(resource.data) || hasUnitAccess(resource.data.unit) || isSuperAdmin());
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || hasUnitAccess(resource.data.unit) || isSuperAdmin());
+      
+      allow create: if true; // Public requests
+      allow update: if isSignedIn() && (isOwner(existing()) || isAdmin()) &&
+        (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'updatedBy', 'professionalId']));
+        
+      allow delete: if isAdmin();
+    }
+
+    match /anonymous_reports/{reportId} {
+      allow create: if true;
+      allow read: if isSignedIn() && (isSuperAdmin() || hasUnitAccess(resource.data.unit) || hasUnitAccess(resource.data.schoolUnit));
+      allow update, delete: if isAdmin();
+    }
+
+    match /letterheads/{letterheadId} {
+      allow read: if isSignedIn() && (isOwner(resource.data) || isAdmin() || resource.data.isDefault == true);
+      allow create: if isSignedIn() && incoming().ownerId == request.auth.uid;
+      allow update: if isSignedIn() && (isOwner(existing()) || isAdmin()) && incoming().ownerId == existing().ownerId;
+      allow delete: if isAdmin();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if isSignedIn() && (isOwner(resource.data) || isAdmin());
+      allow create: if isSignedIn() && incoming().ownerId == request.auth.uid;
+      allow update: if isSignedIn() && (isOwner(existing()) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /appointment_types/{typeId} {
+      allow read: if isSignedIn() && (isOwner(resource.data) || isAdmin());
+      allow create: if isSignedIn() && incoming().ownerId == request.auth.uid;
+      allow update: if isSignedIn() && (isOwner(existing()) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /document_layouts/{layoutId} {
+      allow read: if isSignedIn() && (isOwner(resource.data) || isAdmin());
+      allow create: if isSignedIn() && incoming().ownerId == request.auth.uid;
+      allow update: if isSignedIn() && (isOwner(existing()) || isAdmin());
+      allow delete: if isAdmin();
+    }
+    
+    match /leads/{leadId} {
+      allow create: if true;
+      allow read: if isAdmin();
+    }
+
+    match /app_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /plans/{planId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /subscriptions/{subId} {
+      allow read: if isSignedIn() && (isOwner(resource.data) || isAdmin());
+      allow write: if isAdmin();
+    }
+  }
+}

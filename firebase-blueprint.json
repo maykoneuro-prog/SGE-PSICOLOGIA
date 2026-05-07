@@ -1,0 +1,239 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user profile",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "password": { "type": "string" },
+        "role": { "type": "string" },
+        "units": { "type": "array", "items": { "type": "string" } },
+        "permissions": { "type": "array", "items": { "type": "string" } },
+        "professionalCouncil": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "role", "units", "permissions"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student record",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "ra": { "type": "string" },
+        "class": { "type": "string" },
+        "age": { "type": "number" },
+        "fatherName": { "type": "string" },
+        "motherName": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "contact": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "schoolYear": { "type": "string" },
+        "unit": { "type": "string" },
+        "observations": { "type": "string" },
+        "studentType": { "type": "string", "enum": ["veteran", "newcomer"] },
+        "hasMedicalReport": { "type": "boolean" },
+        "medicalReportType": { "type": "string" },
+        "medicalReportUrl": { "type": "string" },
+        "medicalReports": { "type": "array", "items": { "type": "object" } },
+        "photoUrl": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "ra", "class", "schoolId", "schoolYear", "ownerId"]
+    },
+    "School": {
+      "title": "School",
+      "description": "School record",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "unit": { "type": "string" },
+        "cnpj": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "address": { "type": "string" },
+        "mecAuthorization": { "type": "string" },
+        "phone": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "cnpj", "email", "ownerId"]
+    },
+    "AppointmentType": {
+      "title": "AppointmentType",
+      "description": "Type of appointment (e.g. Psychological)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "label": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "label"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Category for appointments",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "type"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Appointment record",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "professionalId": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "type": { "type": "string" },
+        "subtype": { "type": "string" },
+        "origin": { "type": "string" },
+        "gravity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "date": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "isConfidential": { "type": "boolean" },
+        "unit": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "professionalId", "categoryId", "type", "date", "description", "unit", "ownerId"]
+    },
+    "Referral": {
+      "title": "Referral",
+      "description": "Referral record",
+      "type": "object",
+      "properties": {
+        "appointmentId": { "type": "string" },
+        "description": { "type": "string" },
+        "destination": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["appointmentId", "description", "destination", "date"]
+    },
+    "Screening": {
+      "title": "Screening",
+      "description": "Screening record",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "data": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "data"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "System audit log",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "targetTable": { "type": "string" },
+        "targetId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["action", "timestamp"]
+    },
+    "SchedulingRequest": {
+      "title": "SchedulingRequest",
+      "description": "Public appointment request from student",
+      "type": "object",
+      "properties": {
+        "studentRA": { "type": "string" },
+        "studentPhone": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentRA", "schoolId", "categoryId", "status", "ownerId"]
+    },
+    "Letterhead": {
+      "title": "Letterhead",
+      "description": "Custom document header/letterhead",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "headerText": { "type": "string" },
+        "footerText": { "type": "string" },
+        "isDefault": { "type": "boolean" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "logoUrl", "ownerId"]
+    },
+    "DocumentLayout": {
+      "title": "DocumentLayout",
+      "description": "Custom layout settings for document types",
+      "type": "object",
+      "properties": {
+        "documentTypeId": { "type": "string" },
+        "letterheadId": { "type": "string" },
+        "showProfessionalSignature": { "type": "boolean" },
+        "showDate": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["documentTypeId", "letterheadId"]
+    },
+    "Document": {
+      "title": "Document",
+      "description": "Historical document record",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "typeName": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "professionalId": { "type": "string" },
+        "professionalName": { "type": "string" },
+        "professionalCouncil": { "type": "string" },
+        "data": { "type": "object" },
+        "ownerId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "studentId", "professionalId", "date", "ownerId"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Interested potential customer captured during registration",
+      "type": "object",
+      "properties": {
+        "phoneNumber": { "type": "string" },
+        "source": { "type": "string" },
+        "userAgent": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "contacted", "converted"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["phoneNumber", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users": { "schema": "User", "description": "Collection of users" },
+    "students": { "schema": "Student", "description": "Collection of students" },
+    "schools": { "schema": "School", "description": "Collection of schools" },
+    "appointment_types": { "schema": "AppointmentType", "description": "Collection of appointment types" },
+    "categories": { "schema": "Category", "description": "Collection of categories" },
+    "appointments": { "schema": "Appointment", "description": "Collection of appointments" },
+    "referrals": { "schema": "Referral", "description": "Collection of referrals" },
+    "screenings": { "schema": "Screening", "description": "Collection of screenings" },
+    "audit_logs": { "schema": "AuditLog", "description": "Collection of audit logs" },
+    "scheduling_requests": { "schema": "SchedulingRequest", "description": "Collection of scheduling requests" },
+    "letterheads": { "schema": "Letterhead", "description": "Collection of custom letterheads" },
+    "document_layouts": { "schema": "DocumentLayout", "description": "Collection of document layout settings" },
+    "documents": { "schema": "Document", "description": "Collection of generated documents" },
+    "leads": { "schema": "Lead", "description": "Collection of leads" }
+  }
+}
